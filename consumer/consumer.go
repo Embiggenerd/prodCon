@@ -29,9 +29,6 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	// var buf bytes.Buffer
-	// enc := json.NewEncoder(&buf)
-	// enc.Encode(msg)
 	fmt.Fprintf(w, "data: %v\n\n", string(msg))
 }
 
@@ -64,7 +61,7 @@ func reader(conn *websocket.Conn) {
 		}
 		// print out that message for clarity
 		fmt.Println("received msg", string(p))
-
+		msg = p
 		if err := conn.WriteMessage(messageType, p); err != nil {
 			log.Println(err)
 			return
