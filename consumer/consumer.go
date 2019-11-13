@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -11,12 +12,17 @@ import (
 )
 
 var addr = flag.String("addr", ":8090", "http service address")
-var msg []byte
+
+var msg struct {
+	Data string `json:"data,omitempty"`
+}
+
+// var msg = new(Msg)
 
 func main() {
 	flag.Parse()
 	http.Handle("/", http.FileServer(http.Dir("client")))
-	http.Handle("/echo", http.HandlerFunc(echoHandler))
+	// http.Handle("/echo", http.HandlerFunc(echoHandler))
 	http.HandleFunc("/stream", streamHandler)
 	http.HandleFunc("/ws", wsHandler)
 	err := http.ListenAndServe(*addr, nil)
@@ -26,24 +32,18 @@ func main() {
 }
 
 func streamHandler(w http.ResponseWriter, r *http.Request) {
+
+	var buf = new(bytes.Buffer)
+
+	enc := json.NewEncoder(buf)
+	enc.Encode(msg)
+	fmt.Printf("data: %v\n", buf.String())
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	fmt.Fprintf(w, "data: %v\n\n", string(msg))
-}
+	fmt.Fprintf(w, "data: %v\n\n", buf.String())
 
-func echoHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Printf("Error reading body: %v", err)
-		http.Error(w, "can't read body", http.StatusBadRequest)
-		return
-	}
-
-	fmt.Println("bowdy", string(body))
-	msg = body
-	// w.Write(body)
-	return
 }
 
 var upgrader = websocket.Upgrader{
@@ -52,23 +52,19 @@ var upgrader = websocket.Upgrader{
 }
 
 func reader(conn *websocket.Conn) {
-	for {
-		// read in a message
-		messageType, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		// print out that message for clarity
-		fmt.Println("received msg", string(p))
-		msg = p
-		if err := conn.WriteMessage(messageType, p); err != nil {
-			log.Println(err)
-			return
-		}
-
+	// read in a message
+	err := conn.ReadJSON(&msg)
+	if err != nil {
+		log.Println("lll", err)
+		return
 	}
+
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Println("zzz", msg)
 }
+
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -82,8 +78,5 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	// http.Handle("/", http.FileServer(http.Dir("client")))
-	fmt.Println("msg", string(msg))
-	w.Write(msg)
 	return
 }

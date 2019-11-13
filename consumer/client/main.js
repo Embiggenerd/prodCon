@@ -1,8 +1,10 @@
 function onLoad() {
     const source = new EventSource('/stream')
     source.onmessage = function (event) {
-        console.log('dataz0', event.data)
+        const dataJSON = JSON.parse(event.data);
+
+        console.log('dataz0', dataJSON.data)
         const dataSpan = document.getElementById("data");
-        dataSpan.innerHTML = "message: " + event.data;
+        dataSpan.innerHTML = "message: " + dataJSON.data;
     };
 }

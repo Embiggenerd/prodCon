@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -17,38 +18,11 @@ var addrCon = flag.String("addrCon", ":8090", "http service address")
 
 func main() {
 	flag.Parse()
-	http.Handle("/", http.HandlerFunc(indexHandler))
-	http.HandleFunc("/ws", wsEndpoint)
+	http.HandleFunc("/", wsEndpoint)
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe:", err)
 	}
-}
-
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
-	fmt.Println("this will be sent to consumer:", string(body[:]))
-
-	if err != nil {
-		log.Printf("Error reading body: %v", err)
-		http.Error(w, "can't read body", http.StatusBadRequest)
-		return
-	}
-	resp, err := http.Post("http://127.0.0.1:8090/ws", "text/html", bytes.NewBuffer(body))
-	if err != nil {
-		log.Printf("Error reading body: %v", err)
-		http.Error(w, "can't read body", http.StatusBadRequest)
-		return
-	}
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Error reading body: %v", err)
-		http.Error(w, "can't read body", http.StatusBadRequest)
-		return
-	}
-	fmt.Println("this was returned from consumer:", string(body[:]))
-
-	return
 }
 
 var upgrader = websocket.Upgrader{
@@ -72,15 +46,36 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("dialerError", err)
 		// handle error
 	}
-	// send message
-	err = c.WriteMessage(websocket.TextMessage, body)
+
+	type Msg struct {
+		Data string `json:"data,omitempty"`
+	}
+
+	msg := Msg{Data: string(body)}
+
+	var buf = new(bytes.Buffer)
+
+	enc := json.NewEncoder(buf)
+	enc.Encode(msg)
+
 	if err != nil {
-		fmt.Println("writeMesssage", err)
+		fmt.Println("error:", err)
+	}
+
+	var expect struct {
+		Data string
+	}
+	expect.Data = string(body)
+
+	// send message
+	err = c.WriteJSON(&expect)
+	if err != nil {
+		fmt.Println("writeJSON", err)
 	}
 	// receive message
-	_, message, err := c.ReadMessage()
-	if err != nil {
-		fmt.Println("readMesssage", err)
-	}
-	fmt.Println("returnMesssage", message)
+	// _, message, err := c.ReadMessage()
+	// if err != nil {
+	// 	fmt.Println("readMesssage", err)
+	// }
+	return
 }
