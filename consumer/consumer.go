@@ -42,7 +42,7 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	fmt.Fprintf(w, "data: %v\n\n", buf.String())
+	fmt.Fprintf(w, "data: %v\n\n", buf)
 
 }
 
@@ -62,15 +62,16 @@ func reader(conn *websocket.Conn) {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Println("zzz", msg)
+	fmt.Println("read message:", msg)
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	ws, err := upgrader.Upgrade(w, r, nil)
+
 	if err != nil {
-		log.Println("zzz", err)
+		log.Println("wsHandler", err)
 	}
 	log.Println("Client Connected")
 
