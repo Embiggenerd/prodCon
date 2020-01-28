@@ -25,11 +25,9 @@ func main() {
 	}
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
+// wsEndpoint receives data on port 8080, but it sends data over ws connection on
+// port 8090. It prints the information it will send to consumer, but does not make
+// sure data was consumed correctly
 func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	fmt.Println("this will be sent to consumer:", string(body[:]))
@@ -44,7 +42,6 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		fmt.Println("dialerError", err)
-		// handle error
 	}
 
 	type Msg struct {

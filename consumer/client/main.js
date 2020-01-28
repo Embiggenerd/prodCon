@@ -1,5 +1,5 @@
 function onLoad() {
-    const source = new EventSource('/stream')
+    const source = new EventSource('/stream') // our source is the stream endpoint, not index
     source.onmessage = function (event) {
         const dataJSON = JSON.parse(event.data);
 
